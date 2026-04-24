@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<title>Prompt Timeline</title>
+<style>
+  :root {
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --border:#2a2f3a;
+    --fg:#e6e8ee; --muted:#8b92a5; --accent:#6ea8ff; --warn:#ffb86b;
+    --heat0:#1a1d25; --heat1:#1f3a5f; --heat2:#2e5c99; --heat3:#3d80d6; --heat4:#6ea8ff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic UI",sans-serif}
+  a{color:var(--accent);text-decoration:none}
+  .gate{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:10}
+  .gate form{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:28px 32px;width:min(420px,90vw)}
+  .gate h1{margin:0 0 6px;font-size:18px}
+  .gate p{margin:0 0 18px;color:var(--muted);font-size:13px}
+  .gate input{width:100%;padding:11px 14px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--fg);font-size:14px}
+  .gate button{margin-top:12px;width:100%;padding:11px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+  .gate .err{margin-top:10px;color:var(--warn);font-size:12px;min-height:16px}
+  header{position:sticky;top:0;background:rgba(15,17,21,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:12px 16px;z-index:5}
+  header .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  header h1{margin:0;font-size:15px;font-weight:600}
+  header .meta{color:var(--muted);font-size:12px}
+  header input,header select{padding:8px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--fg);font:inherit}
+  header input[type=search]{flex:1;min-width:180px}
+  main{padding:12px 16px;max-width:960px;margin:0 auto}
+  .section-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 8px}
+  .heatmap{overflow-x:auto;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px}
+  .heatmap table{border-collapse:separate;border-spacing:3px}
+  .heatmap td{width:11px;height:11px;border-radius:2px;background:var(--heat0)}
+  .heatmap td.h1{background:var(--heat1)} .heatmap td.h2{background:var(--heat2)}
+  .heatmap td.h3{background:var(--heat3)} .heatmap td.h4{background:var(--heat4)}
+  .heatmap td.label{background:transparent;font-size:10px;color:var(--muted);width:auto;padding:0 6px;height:auto}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin:8px 0}
+  .card .head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px}
+  .card .ts{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+  .card .proj{font-size:11px;background:var(--panel2);border:1px solid var(--border);color:var(--accent);padding:2px 7px;border-radius:999px}
+  .card pre{margin:0;white-space:pre-wrap;word-wrap:break-word;font:13px/1.5 "JetBrains Mono","Consolas",monospace;color:#dce1ec;max-height:8em;overflow:hidden;position:relative}
+  .card pre.open{max-height:none}
+  .card .fade{position:absolute;bottom:0;left:0;right:0;height:24px;background:linear-gradient(transparent,var(--panel));pointer-events:none}
+  .card .toggle{margin-top:6px;font-size:12px;color:var(--accent);cursor:pointer;background:none;border:0;padding:0}
+  .date-sep{color:var(--muted);font-size:12px;margin:18px 0 6px;padding:4px 0;border-bottom:1px solid var(--border)}
+  .count{color:var(--muted);font-size:12px;margin-left:auto}
+</style>
+</head>
+<body>
+<div class="gate" id="gate">
+  <form id="gform" autocomplete="off">
+    <h1>Prompt Timeline</h1>
+    <p>合言葉を入力</p>
+    <input id="pass" type="password" autocomplete="off" autofocus>
+    <button type="submit">復号</button>
+    <div class="err" id="err"></div>
+  </form>
+</div>
+
+<header id="app" style="display:none">
+  <div class="row">
+    <h1>Prompt Timeline</h1>
+    <span class="meta" id="meta"></span>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <input id="q" type="search" placeholder="全文検索 (スペースでAND)">
+    <select id="proj"><option value="">全プロジェクト</option></select>
+    <input id="from" type="date">
+    <input id="to" type="date">
+  </div>
+</header>
+<main id="body" style="display:none">
+  <div class="section-title">カレンダー（日別プロンプト数）</div>
+  <div class="heatmap" id="heatmap"></div>
+  <div class="section-title" id="listTitle">タイムライン</div>
+  <div id="list"></div>
+</main>
+
+<script>
+(async function(){
+  const $ = (id) => document.getElementById(id);
+
+  async function deriveKey(pass, salt, iter){
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass),
+      {name:"PBKDF2"}, false, ["deriveKey"]);
+    return crypto.subtle.deriveKey(
+      {name:"PBKDF2", salt, iterations:iter, hash:"SHA-256"},
+      base, {name:"AES-GCM", length:256}, false, ["decrypt"]
+    );
+  }
+  function b64toBytes(b64){
+    const bin = atob(b64);
+    const u = new Uint8Array(bin.length);
+    for (let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+    return u;
+  }
+
+  let DATA = null;
+  async function tryUnlock(pass){
+    const res = await fetch("data.enc.json", {cache:"no-cache"});
+    if (!res.ok) throw new Error("data.enc.json 読めない ("+res.status+")");
+    const enc = await res.json();
+    const key = await deriveKey(pass, b64toBytes(enc.salt), enc.iter);
+    const plain = await crypto.subtle.decrypt(
+      {name:"AES-GCM", iv:b64toBytes(enc.nonce)}, key, b64toBytes(enc.ct)
+    );
+    return JSON.parse(new TextDecoder().decode(plain));
+  }
+
+  $("gform").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    $("err").textContent = "復号中…";
+    try {
+      DATA = await tryUnlock($("pass").value);
+      $("gate").style.display="none";
+      $("app").style.display="";
+      $("body").style.display="";
+      render();
+    } catch(err) {
+      $("err").textContent = "合言葉ちゃうかも: " + (err.message||err);
+    }
+  });
+
+  function fmt(ts){
+    const d = new Date(ts);
+    const p=n=>String(n).padStart(2,"0");
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+  function dayKey(ts){
+    const d = new Date(ts);
+    const p=n=>String(n).padStart(2,"0");
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+  }
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  function buildProjectFilter(){
+    const projs = [...new Set(DATA.records.map(r=>r.project))].sort();
+    const sel = $("proj");
+    projs.forEach(p=>{
+      const o = document.createElement("option");
+      o.value = p; o.textContent = p;
+      sel.appendChild(o);
+    });
+  }
+
+  function buildHeatmap(records){
+    const counts = {};
+    records.forEach(r=>{ const k=dayKey(r.ts); counts[k]=(counts[k]||0)+1; });
+    if (records.length===0){ $("heatmap").innerHTML="<div style='color:var(--muted)'>該当無し</div>"; return; }
+    const tss = records.map(r=>new Date(r.ts).getTime());
+    const minD = new Date(Math.min(...tss)); minD.setHours(0,0,0,0);
+    const maxD = new Date(Math.max(...tss)); maxD.setHours(0,0,0,0);
+    // 週の頭(日曜)に揃える
+    const start = new Date(minD); start.setDate(start.getDate() - start.getDay());
+    const end   = new Date(maxD); end.setDate(end.getDate() + (6-end.getDay()));
+    const weeks = Math.round((end-start)/(7*86400000))+1;
+    // cell[dow][week]
+    const rows = [];
+    const maxC = Math.max(1, ...Object.values(counts));
+    function level(c){ if(!c) return 0; const r=c/maxC; return r>.75?4:r>.5?3:r>.25?2:1; }
+    const dows = ["日","月","火","水","木","金","土"];
+    let html = "<table><thead><tr><td class='label'></td>";
+    // 月ラベル
+    for(let w=0; w<weeks; w++){
+      const d = new Date(start); d.setDate(d.getDate()+w*7);
+      const prev = new Date(d); prev.setDate(prev.getDate()-7);
+      const m = d.getMonth()!==prev.getMonth() ? (d.getMonth()+1)+"月" : "";
+      html += `<td class='label'>${m}</td>`;
+    }
+    html += "</tr></thead><tbody>";
+    for(let dow=0; dow<7; dow++){
+      html += `<tr><td class='label'>${dow%2===1?dows[dow]:""}</td>`;
+      for(let w=0; w<weeks; w++){
+        const d = new Date(start); d.setDate(d.getDate()+w*7+dow);
+        if (d<minD||d>maxD){ html+="<td></td>"; continue; }
+        const k = dayKey(d.toISOString());
+        const c = counts[k]||0;
+        const lv = level(c);
+        const title = `${k}: ${c}件`;
+        html += `<td class='${lv?'h'+lv:''}' title='${title}'></td>`;
+      }
+      html += "</tr>";
+    }
+    html += "</tbody></table>";
+    $("heatmap").innerHTML = html;
+  }
+
+  function applyFilter(){
+    const q = $("q").value.trim().toLowerCase();
+    const terms = q? q.split(/\s+/):[];
+    const proj = $("proj").value;
+    const from = $("from").value ? new Date($("from").value) : null;
+    const to   = $("to").value ? new Date($("to").value) : null;
+    if (to) to.setHours(23,59,59,999);
+    return DATA.records.filter(r=>{
+      if (proj && r.project!==proj) return false;
+      const t = new Date(r.ts);
+      if (from && t<from) return false;
+      if (to && t>to) return false;
+      if (terms.length){
+        const hay = (r.text+" "+r.project).toLowerCase();
+        for (const term of terms) if (!hay.includes(term)) return false;
+      }
+      return true;
+    });
+  }
+
+  function renderList(records){
+    const list = $("list");
+    list.innerHTML = "";
+    // 新しい順に並べ替えて表示（内部は昇順だが表示は降順）
+    const sorted = records.slice().sort((a,b)=> a.ts<b.ts?1:-1);
+    let curDay = "";
+    const frag = document.createDocumentFragment();
+    // 1000件超えたら最新1000だけ描画（軽さ優先）
+    const cap = 1000;
+    const shown = sorted.slice(0, cap);
+    shown.forEach(r=>{
+      const dk = dayKey(r.ts);
+      if (dk !== curDay){
+        curDay = dk;
+        const h = document.createElement("div");
+        h.className = "date-sep";
+        h.textContent = dk;
+        frag.appendChild(h);
+      }
+      const c = document.createElement("div");
+      c.className = "card";
+      const text = escapeHtml(r.text);
+      const long = r.text.length > 300;
+      c.innerHTML = `
+        <div class="head">
+          <span class="ts">${fmt(r.ts)}</span>
+          <span class="proj">${escapeHtml(r.project||"")}</span>
+        </div>
+        <pre>${text}${long?'<span class="fade"></span>':''}</pre>
+        ${long?'<button class="toggle">展開</button>':''}
+      `;
+      if (long){
+        const btn = c.querySelector(".toggle");
+        btn.addEventListener("click", ()=>{
+          const pre = c.querySelector("pre");
+          const open = pre.classList.toggle("open");
+          btn.textContent = open ? "畳む" : "展開";
+          const fade = pre.querySelector(".fade");
+          if (fade) fade.style.display = open ? "none":"";
+        });
+      }
+      frag.appendChild(c);
+    });
+    list.appendChild(frag);
+    $("count").textContent = `${records.length}件ヒット（表示: ${shown.length}）`;
+  }
+
+  function render(){
+    $("meta").textContent = `${DATA.count}件・built ${DATA.built_at}`;
+    if (!$("proj").options.length || $("proj").options.length === 1) buildProjectFilter();
+    const filtered = applyFilter();
+    buildHeatmap(filtered);
+    renderList(filtered);
+  }
+
+  ["q","proj","from","to"].forEach(id=>{
+    $(id).addEventListener("input", ()=> render());
+    $(id).addEventListener("change", ()=> render());
+  });
+})();
+</script>
+</body>
+</html>
