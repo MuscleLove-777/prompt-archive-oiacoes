@@ -8,43 +8,120 @@
 <style>
   :root {
     --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --border:#2a2f3a;
-    --fg:#e6e8ee; --muted:#8b92a5; --accent:#6ea8ff; --warn:#ffb86b;
+    --fg:#e6e8ee; --muted:#8b92a5; --accent:#6ea8ff; --warn:#ffb86b; --err:#ff7575; --ok:#7ed99a;
     --heat0:#1a1d25; --heat1:#1f3a5f; --heat2:#2e5c99; --heat3:#3d80d6; --heat4:#6ea8ff;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic UI",sans-serif}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic UI",sans-serif}
   a{color:var(--accent);text-decoration:none}
-  .gate{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:10}
+  a:hover{text-decoration:underline}
+  button{font:inherit}
+
+  /* Unlock gate */
+  .gate{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:100}
   .gate form{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:28px 32px;width:min(420px,90vw)}
   .gate h1{margin:0 0 6px;font-size:18px}
   .gate p{margin:0 0 18px;color:var(--muted);font-size:13px}
   .gate input{width:100%;padding:11px 14px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--fg);font-size:14px}
   .gate button{margin-top:12px;width:100%;padding:11px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
   .gate .err{margin-top:10px;color:var(--warn);font-size:12px;min-height:16px}
-  header{position:sticky;top:0;background:rgba(15,17,21,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:12px 16px;z-index:5}
-  header .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .gate label{display:flex;gap:6px;align-items:center;color:var(--muted);font-size:12px;margin-top:10px;cursor:pointer}
+
+  /* Header */
+  header{position:sticky;top:0;background:rgba(15,17,21,.95);backdrop-filter:blur(10px);
+         border-bottom:1px solid var(--border);z-index:10}
+  header .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 16px}
   header h1{margin:0;font-size:15px;font-weight:600}
   header .meta{color:var(--muted);font-size:12px}
-  header input,header select{padding:8px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--fg);font:inherit}
+  header .count{color:var(--muted);font-size:12px;margin-left:auto}
+  header input,header select{padding:7px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--fg);font:inherit}
   header input[type=search]{flex:1;min-width:180px}
-  main{padding:12px 16px;max-width:960px;margin:0 auto}
-  .section-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 8px}
+  header .logout{background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:6px 10px;cursor:pointer}
+  header .logout:hover{color:var(--err);border-color:var(--err)}
+  .tabs{display:flex;gap:4px;padding:0 12px 10px;flex-wrap:wrap;overflow-x:auto}
+  .tab{padding:6px 12px;border:1px solid var(--border);background:var(--panel);border-radius:999px;
+       color:var(--muted);cursor:pointer;font-size:12px;white-space:nowrap}
+  .tab.active{background:var(--accent);color:#0c1220;border-color:var(--accent);font-weight:600}
+  .tab .badge{opacity:.7;font-size:10px;margin-left:4px}
+
+  main{padding:12px 16px 120px;max-width:1040px;margin:0 auto}
+  .section-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 8px;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+  .section-title .tgl{font-size:10px}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px}
+
+  /* Stats */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+  .stat{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .stat .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  .stat .v{font-size:22px;font-weight:600;margin-top:4px}
+  .stat .sub{color:var(--muted);font-size:11px;margin-top:2px}
+  .bars{margin-top:6px}
+  .bar{display:flex;align-items:center;gap:8px;font-size:12px;margin:3px 0}
+  .bar .label{width:140px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar .fill{flex:1;height:8px;background:var(--panel2);border-radius:4px;overflow:hidden}
+  .bar .fill>span{display:block;height:100%;background:var(--accent)}
+  .bar .val{width:42px;text-align:right;color:var(--fg);font-variant-numeric:tabular-nums}
+
+  /* Digest */
+  .digest{background:linear-gradient(180deg,#1a2334,var(--panel));border:1px solid #2e3a56;
+          border-radius:10px;padding:14px 16px}
+  .digest h2{margin:0 0 6px;font-size:14px;color:var(--accent)}
+  .digest p{margin:4px 0;color:var(--fg)}
+  .digest .files{margin-top:8px;font-size:12px;color:var(--muted)}
+  .digest .chip{display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;background:var(--panel2);border:1px solid var(--border);border-radius:999px;font-size:11px}
+
+  /* Heatmap */
   .heatmap{overflow-x:auto;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px}
   .heatmap table{border-collapse:separate;border-spacing:3px}
   .heatmap td{width:11px;height:11px;border-radius:2px;background:var(--heat0)}
   .heatmap td.h1{background:var(--heat1)} .heatmap td.h2{background:var(--heat2)}
   .heatmap td.h3{background:var(--heat3)} .heatmap td.h4{background:var(--heat4)}
   .heatmap td.label{background:transparent;font-size:10px;color:var(--muted);width:auto;padding:0 6px;height:auto}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin:8px 0}
-  .card .head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px}
+
+  /* Cards */
+  .date-sep{color:var(--muted);font-size:12px;margin:18px 0 6px;padding:4px 8px;
+            border-bottom:1px solid var(--border);position:sticky;top:96px;background:var(--bg)}
+  .session-group{border-left:2px solid var(--border);margin:10px 0 10px 8px;padding-left:10px}
+  .session-group>.sess-head{font-size:11px;color:var(--muted);padding:4px 0;cursor:pointer;user-select:none}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin:8px 0;position:relative}
+  .card.interrupted{border-left:3px solid var(--warn)}
+  .card.has-errors{border-left:3px solid var(--err)}
+  .card .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
   .card .ts{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
-  .card .proj{font-size:11px;background:var(--panel2);border:1px solid var(--border);color:var(--accent);padding:2px 7px;border-radius:999px}
-  .card pre{margin:0;white-space:pre-wrap;word-wrap:break-word;font:13px/1.5 "JetBrains Mono","Consolas",monospace;color:#dce1ec;max-height:8em;overflow:hidden;position:relative}
+  .card .proj{font-size:11px;background:var(--panel2);border:1px solid var(--border);color:var(--accent);padding:2px 7px;border-radius:999px;cursor:pointer}
+  .card .branch{font-size:10px;color:var(--muted);font-family:"JetBrains Mono",monospace}
+  .card .statusdot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+  .card.interrupted .statusdot{background:var(--warn)}
+  .card.has-errors .statusdot{background:var(--err)}
+  .card pre{margin:0;white-space:pre-wrap;word-wrap:break-word;
+            font:13px/1.55 "JetBrains Mono","Consolas",monospace;color:#dce1ec;
+            max-height:8em;overflow:hidden;position:relative}
   .card pre.open{max-height:none}
-  .card .fade{position:absolute;bottom:0;left:0;right:0;height:24px;background:linear-gradient(transparent,var(--panel));pointer-events:none}
+  .card pre .fade{position:absolute;bottom:0;left:0;right:0;height:24px;background:linear-gradient(transparent,var(--panel));pointer-events:none}
   .card .toggle{margin-top:6px;font-size:12px;color:var(--accent);cursor:pointer;background:none;border:0;padding:0}
-  .date-sep{color:var(--muted);font-size:12px;margin:18px 0 6px;padding:4px 0;border-bottom:1px solid var(--border)}
-  .count{color:var(--muted);font-size:12px;margin-left:auto}
+  .card .reply{margin-top:10px;padding:8px 10px;background:var(--panel2);border-left:2px solid var(--accent);border-radius:4px;
+               color:#cfd4e2;font-size:12px;line-height:1.55;white-space:pre-wrap}
+  .card .meta-row{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11px;color:var(--muted)}
+  .chip{display:inline-flex;gap:4px;align-items:center;padding:2px 8px;background:var(--panel2);border:1px solid var(--border);border-radius:999px;font-size:11px}
+  .chip.b{color:#ffd280} .chip.e{color:#b5e0ff} .chip.w{color:#ffa8b5} .chip.r{color:#a6e3b5}
+  .chip.s{color:#d4a5ff} .chip.web{color:#8de3e0} .chip.a{color:#ff9cd6} .chip.t{color:#c7c0ff}
+  .chip.mcp{color:#f5b65e}
+  .files-block{margin-top:8px;font-size:12px}
+  .files-block .label{color:var(--muted);font-size:11px;margin-right:6px}
+  .files-block .fp{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);cursor:pointer;display:inline-block;margin:2px 8px 2px 0}
+  .files-block .fp:hover{text-decoration:underline}
+
+  .empty{color:var(--muted);padding:30px;text-align:center;font-size:13px}
+
+  /* File reverse search popup */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:none;align-items:flex-start;justify-content:center;padding-top:60px}
+  .modal.open{display:flex}
+  .modal .box{background:var(--panel);border:1px solid var(--border);border-radius:10px;width:min(720px,95vw);max-height:80vh;overflow:auto;padding:16px}
+  .modal h3{margin:0 0 8px;font-size:14px}
+  .modal .close{float:right;background:none;border:0;color:var(--muted);cursor:pointer;font-size:18px}
+  .modal .hit{padding:8px 0;border-bottom:1px solid var(--border);font-size:12px}
+  .modal .hit .t{color:var(--accent);cursor:pointer}
 </style>
 </head>
 <body>
@@ -54,33 +131,65 @@
     <p>合言葉を入力</p>
     <input id="pass" type="password" autocomplete="off" autofocus>
     <button type="submit">復号</button>
+    <label><input type="checkbox" id="remember" checked>このブラウザで覚える</label>
     <div class="err" id="err"></div>
   </form>
 </div>
 
 <header id="app" style="display:none">
-  <div class="row">
+  <div class="bar">
     <h1>Prompt Timeline</h1>
     <span class="meta" id="meta"></span>
     <span class="count" id="count"></span>
+    <button class="logout" id="logout">ロック</button>
   </div>
-  <div class="row" style="margin-top:8px">
+  <div class="bar">
     <input id="q" type="search" placeholder="全文検索 (スペースでAND)">
     <select id="proj"><option value="">全プロジェクト</option></select>
     <input id="from" type="date">
     <input id="to" type="date">
+    <select id="status">
+      <option value="">全ステータス</option>
+      <option value="ok">正常</option>
+      <option value="interrupted">中断</option>
+      <option value="errors">エラー有</option>
+    </select>
+    <button id="filebtn" class="logout">🔎成果物検索</button>
+    <button id="grpbtn" class="logout">🔀セッションまとめ</button>
   </div>
+  <div class="tabs" id="tabs"></div>
 </header>
+
 <main id="body" style="display:none">
-  <div class="section-title">カレンダー（日別プロンプト数）</div>
-  <div class="heatmap" id="heatmap"></div>
-  <div class="section-title" id="listTitle">タイムライン</div>
+  <div class="section-title" data-tgt="stats"><span class="tgl">▼</span>📊 統計ダッシュボード</div>
+  <div id="stats" class="stats"></div>
+
+  <div class="section-title" data-tgt="digest"><span class="tgl">▼</span>📅 今日のダイジェスト</div>
+  <div id="digest"></div>
+
+  <div class="section-title" data-tgt="summaries"><span class="tgl">▶</span>🧠 週次AI要約</div>
+  <div id="summaries" style="display:none"></div>
+
+  <div class="section-title" data-tgt="heatmap"><span class="tgl">▼</span>🔥 カレンダー</div>
+  <div id="heatmap" class="heatmap"></div>
+
+  <div class="section-title" id="listTitle"><span class="tgl" style="opacity:0">▼</span>📜 タイムライン</div>
   <div id="list"></div>
 </main>
+
+<div class="modal" id="filemodal">
+  <div class="box">
+    <button class="close" id="fileclose">×</button>
+    <h3>🔎 成果物ファイル検索</h3>
+    <input id="fileq" type="search" placeholder="ファイル名 or パスの一部" style="width:100%;padding:8px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;color:var(--fg)">
+    <div id="filehits" style="margin-top:10px"></div>
+  </div>
+</div>
 
 <script>
 (async function(){
   const $ = (id) => document.getElementById(id);
+  const PASS_KEY = "timeline_pass_v2";
 
   async function deriveKey(pass, salt, iter){
     const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass),
@@ -97,7 +206,8 @@
     return u;
   }
 
-  let DATA = null;
+  let DATA = null, STATE = {tab:"all", group:false};
+
   async function tryUnlock(pass){
     const res = await fetch("data.enc.json", {cache:"no-cache"});
     if (!res.ok) throw new Error("data.enc.json 読めない ("+res.status+")");
@@ -109,19 +219,37 @@
     return JSON.parse(new TextDecoder().decode(plain));
   }
 
-  $("gform").addEventListener("submit", async (e)=>{
-    e.preventDefault();
-    $("err").textContent = "復号中…";
+  async function boot(pass, save){
     try {
-      DATA = await tryUnlock($("pass").value);
+      DATA = await tryUnlock(pass);
+      if (save) sessionStorage.setItem(PASS_KEY, pass);
       $("gate").style.display="none";
       $("app").style.display="";
       $("body").style.display="";
-      render();
+      initUI();
     } catch(err) {
+      sessionStorage.removeItem(PASS_KEY);
+      $("gate").style.display="";
       $("err").textContent = "合言葉ちゃうかも: " + (err.message||err);
     }
+  }
+
+  $("gform").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    $("err").textContent = "復号中...";
+    await boot($("pass").value, $("remember").checked);
   });
+
+  $("logout").addEventListener("click", ()=>{
+    sessionStorage.removeItem(PASS_KEY);
+    location.reload();
+  });
+
+  // Auto-unlock from sessionStorage
+  const cached = sessionStorage.getItem(PASS_KEY);
+  if (cached){ boot(cached, true); }
+
+  /* ========== UI ========== */
 
   function fmt(ts){
     const d = new Date(ts);
@@ -133,18 +261,159 @@
     const p=n=>String(n).padStart(2,"0");
     return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
   }
+  function isoWeek(date){
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dow = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dow);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+    const weekNum = Math.ceil((((d - yearStart)/86400000)+1)/7);
+    return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2,"0")}`;
+  }
   function escapeHtml(s){
-    return s.replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+    return (s||"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+  function basename(p){
+    if (!p) return "";
+    const parts = p.replace(/\\/g,"/").split("/");
+    return parts[parts.length-1] || p;
+  }
+  function fmtDur(sec){
+    if (!sec) return "瞬時";
+    if (sec<60) return `${sec}秒`;
+    if (sec<3600) return `${Math.floor(sec/60)}分${sec%60?sec%60+"秒":""}`;
+    return `${Math.floor(sec/3600)}h${Math.floor((sec%3600)/60)}m`;
+  }
+  function statusOf(r){
+    if (r.interrupted) return "interrupted";
+    if (r.errors>0) return "has-errors";
+    return "ok";
+  }
+
+  const ACTION_META = {
+    bash:{cls:"b",lbl:"Bash"}, edit:{cls:"e",lbl:"Edit"}, write:{cls:"w",lbl:"Write"},
+    read:{cls:"r",lbl:"Read"}, search:{cls:"s",lbl:"検索"}, web:{cls:"web",lbl:"Web"},
+    agent:{cls:"a",lbl:"Agent"}, todo:{cls:"t",lbl:"Todo"}, mcp:{cls:"mcp",lbl:"MCP"},
+    schedule:{cls:"t",lbl:"予約"}, plan:{cls:"t",lbl:"Plan"}, ask:{cls:"t",lbl:"質問"}, other:{cls:"",lbl:"他"}
+  };
+
+  function buildTabs(){
+    const projs = {};
+    DATA.records.forEach(r=>{ projs[r.project]=(projs[r.project]||0)+1; });
+    const topProjs = Object.entries(projs).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const today = dayKey(new Date().toISOString());
+    const todayN = DATA.records.filter(r=>dayKey(r.ts)===today).length;
+    const weekStart = new Date(); weekStart.setDate(weekStart.getDate()-weekStart.getDay());
+    weekStart.setHours(0,0,0,0);
+    const weekN = DATA.records.filter(r=>new Date(r.ts)>=weekStart).length;
+    const intN = DATA.records.filter(r=>r.interrupted||r.errors>0).length;
+
+    const tabs = [
+      {id:"all", lbl:"全部", n:DATA.records.length},
+      {id:"today", lbl:"今日", n:todayN},
+      {id:"week", lbl:"今週", n:weekN},
+      {id:"interrupted", lbl:"⚠️要確認", n:intN},
+      ...topProjs.map(([p,n])=>({id:"p:"+p, lbl:p, n}))
+    ];
+    const html = tabs.map(t =>
+      `<div class="tab${STATE.tab===t.id?" active":""}" data-tab="${escapeHtml(t.id)}">${escapeHtml(t.lbl)}<span class="badge">${t.n}</span></div>`
+    ).join("");
+    $("tabs").innerHTML = html;
+    $("tabs").querySelectorAll(".tab").forEach(el=>{
+      el.addEventListener("click", ()=>{ STATE.tab = el.dataset.tab; render(); });
+    });
   }
 
   function buildProjectFilter(){
-    const projs = [...new Set(DATA.records.map(r=>r.project))].sort();
     const sel = $("proj");
+    if (sel.options.length>1) return;
+    const projs = [...new Set(DATA.records.map(r=>r.project))].sort();
     projs.forEach(p=>{
       const o = document.createElement("option");
-      o.value = p; o.textContent = p;
-      sel.appendChild(o);
+      o.value = p; o.textContent = p; sel.appendChild(o);
     });
+  }
+
+  function buildStats(records){
+    const totalPrompts = records.length;
+    const totalDur = records.reduce((s,r)=>s+(r.duration_sec||0),0);
+    const totalTurns = records.reduce((s,r)=>s+(r.turn_count||0),0);
+    const filesWritten = new Set();
+    const filesEdited = new Set();
+    const agents = {};
+    const actions = {};
+    const projectCount = {};
+    records.forEach(r=>{
+      r.files_written.forEach(f=>filesWritten.add(f));
+      r.files_edited.forEach(f=>filesEdited.add(f));
+      r.agents.forEach(a=>agents[a]=(agents[a]||0)+1);
+      Object.entries(r.actions).forEach(([k,v])=>actions[k]=(actions[k]||0)+v);
+      projectCount[r.project]=(projectCount[r.project]||0)+1;
+    });
+    const topProjs = Object.entries(projectCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    const maxP = topProjs.length? topProjs[0][1]:1;
+    const topActs = Object.entries(actions).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const maxA = topActs.length? topActs[0][1]:1;
+
+    $("stats").innerHTML = `
+      <div class="stat"><div class="k">総プロンプト数</div><div class="v">${totalPrompts.toLocaleString()}</div>
+        <div class="sub">assistant往復 ${totalTurns.toLocaleString()}回</div></div>
+      <div class="stat"><div class="k">累計アクティブ時間</div><div class="v">${fmtDur(totalDur)}</div>
+        <div class="sub">1プロンプト平均 ${fmtDur(Math.round(totalDur/Math.max(1,totalPrompts)))}</div></div>
+      <div class="stat"><div class="k">成果物ファイル</div><div class="v">${filesWritten.size.toLocaleString()}</div>
+        <div class="sub">編集 ${filesEdited.size.toLocaleString()} / 計 ${(filesWritten.size+filesEdited.size).toLocaleString()}</div></div>
+      <div class="stat" style="grid-column: span 2"><div class="k">プロジェクト別</div>
+        <div class="bars">${topProjs.map(([p,n])=>
+          `<div class="bar"><span class="label" title="${escapeHtml(p)}">${escapeHtml(p)}</span>
+            <span class="fill"><span style="width:${(n/maxP*100).toFixed(1)}%"></span></span>
+            <span class="val">${n}</span></div>`).join("")}</div></div>
+      <div class="stat" style="grid-column: span 2"><div class="k">アクション内訳</div>
+        <div class="bars">${topActs.map(([k,v])=>
+          `<div class="bar"><span class="label">${ACTION_META[k]?.lbl||k}</span>
+            <span class="fill"><span style="width:${(v/maxA*100).toFixed(1)}%"></span></span>
+            <span class="val">${v.toLocaleString()}</span></div>`).join("")}</div></div>
+    `;
+  }
+
+  function buildDigest(records){
+    const today = dayKey(new Date().toISOString());
+    const todays = records.filter(r=>dayKey(r.ts)===today);
+    if (todays.length===0){
+      $("digest").innerHTML = '<div class="digest"><h2>今日</h2><p>まだプロンプト無し。</p></div>';
+      return;
+    }
+    const projs = [...new Set(todays.map(r=>r.project))];
+    const files = new Set();
+    const acts = {};
+    todays.forEach(r=>{
+      r.files_written.forEach(f=>files.add(f));
+      r.files_edited.forEach(f=>files.add(f));
+      Object.entries(r.actions).forEach(([k,v])=>acts[k]=(acts[k]||0)+v);
+    });
+    const dur = todays.reduce((s,r)=>s+(r.duration_sec||0),0);
+    const actsHtml = Object.entries(acts).sort((a,b)=>b[1]-a[1]).slice(0,6)
+      .map(([k,v])=>`<span class="chip">${ACTION_META[k]?.lbl||k}×${v}</span>`).join("");
+    const filesHtml = [...files].slice(0,10)
+      .map(f=>`<span class="chip" title="${escapeHtml(f)}">${escapeHtml(basename(f))}</span>`).join("");
+    $("digest").innerHTML = `
+      <div class="digest">
+        <h2>今日 (${today})</h2>
+        <p>${todays.length}プロンプト・${fmtDur(dur)}稼働・${projs.length}プロジェクト横断</p>
+        <div>${actsHtml}</div>
+        <div class="files">触ったプロジェクト: ${projs.map(p=>`<span class="chip">${escapeHtml(p)}</span>`).join("")}</div>
+        ${files.size?`<div class="files">作成/編集: ${filesHtml}${files.size>10?` <span class="chip">+${files.size-10}</span>`:""}</div>`:""}
+      </div>`;
+  }
+
+  function buildSummaries(){
+    const S = DATA.summaries || [];
+    if (!S.length){
+      $("summaries").innerHTML = '<div class="panel" style="color:var(--muted)">まだ要約無し（日曜07:00に自動生成される）</div>';
+      return;
+    }
+    $("summaries").innerHTML = S.slice().reverse().map(s =>
+      `<div class="panel" style="margin:8px 0"><div style="color:var(--accent);font-weight:600;margin-bottom:6px">${escapeHtml(s.week)}</div>
+       <div style="white-space:pre-wrap;font-size:13px;color:#dce1ec">${escapeHtml(s.text)}</div></div>`
+    ).join("");
   }
 
   function buildHeatmap(records){
@@ -154,17 +423,13 @@
     const tss = records.map(r=>new Date(r.ts).getTime());
     const minD = new Date(Math.min(...tss)); minD.setHours(0,0,0,0);
     const maxD = new Date(Math.max(...tss)); maxD.setHours(0,0,0,0);
-    // 週の頭(日曜)に揃える
     const start = new Date(minD); start.setDate(start.getDate() - start.getDay());
     const end   = new Date(maxD); end.setDate(end.getDate() + (6-end.getDay()));
     const weeks = Math.round((end-start)/(7*86400000))+1;
-    // cell[dow][week]
-    const rows = [];
     const maxC = Math.max(1, ...Object.values(counts));
     function level(c){ if(!c) return 0; const r=c/maxC; return r>.75?4:r>.5?3:r>.25?2:1; }
     const dows = ["日","月","火","水","木","金","土"];
     let html = "<table><thead><tr><td class='label'></td>";
-    // 月ラベル
     for(let w=0; w<weeks; w++){
       const d = new Date(start); d.setDate(d.getDate()+w*7);
       const prev = new Date(d); prev.setDate(prev.getDate()-7);
@@ -180,8 +445,7 @@
         const k = dayKey(d.toISOString());
         const c = counts[k]||0;
         const lv = level(c);
-        const title = `${k}: ${c}件`;
-        html += `<td class='${lv?'h'+lv:''}' title='${title}'></td>`;
+        html += `<td class='${lv?'h'+lv:''}' title='${k}: ${c}件'></td>`;
       }
       html += "</tr>";
     }
@@ -196,78 +460,222 @@
     const from = $("from").value ? new Date($("from").value) : null;
     const to   = $("to").value ? new Date($("to").value) : null;
     if (to) to.setHours(23,59,59,999);
+    const statusF = $("status").value;
+    const tab = STATE.tab;
+    const today = dayKey(new Date().toISOString());
+    const weekStart = new Date(); weekStart.setDate(weekStart.getDate()-weekStart.getDay());
+    weekStart.setHours(0,0,0,0);
+
     return DATA.records.filter(r=>{
       if (proj && r.project!==proj) return false;
       const t = new Date(r.ts);
       if (from && t<from) return false;
       if (to && t>to) return false;
+      if (statusF){
+        const st = statusOf(r);
+        if (statusF==="ok" && st!=="ok") return false;
+        if (statusF==="interrupted" && !r.interrupted) return false;
+        if (statusF==="errors" && !(r.errors>0)) return false;
+      }
+      if (tab==="today" && dayKey(r.ts)!==today) return false;
+      if (tab==="week" && t<weekStart) return false;
+      if (tab==="interrupted" && !(r.interrupted||r.errors>0)) return false;
+      if (tab.startsWith("p:") && r.project!==tab.slice(2)) return false;
       if (terms.length){
-        const hay = (r.text+" "+r.project).toLowerCase();
+        const hay = (r.text+" "+r.project+" "+(r.first_reply||"")+" "+r.files_written.join(" ")+" "+r.files_edited.join(" ")).toLowerCase();
         for (const term of terms) if (!hay.includes(term)) return false;
       }
       return true;
     });
   }
 
+  function renderCard(r){
+    const text = escapeHtml(r.text);
+    const long = r.text.length > 400;
+    const acts = Object.entries(r.actions).sort((a,b)=>b[1]-a[1])
+      .map(([k,v])=>{
+        const m = ACTION_META[k]||ACTION_META.other;
+        return `<span class="chip ${m.cls}">${m.lbl}×${v}</span>`;
+      }).join("");
+    const fw = r.files_written.map(f=>`<span class="fp" title="${escapeHtml(f)}">📝${escapeHtml(basename(f))}</span>`).join("");
+    const fe = r.files_edited.map(f=>`<span class="fp" title="${escapeHtml(f)}">✏️${escapeHtml(basename(f))}</span>`).join("");
+    const agents = r.agents.map(a=>`<span class="chip a">🤖${escapeHtml(a)}</span>`).join("");
+    const reply = r.first_reply ? `<div class="reply">${escapeHtml(r.first_reply)}${r.first_reply.length>=240?"…":""}</div>` : "";
+    const status = statusOf(r);
+    const statusLbl = status==="interrupted"?"⚠️中断":status==="has-errors"?`⚠️${r.errors}エラー`:"✅";
+    return `<div class="card ${status!=="ok"?status:""}" data-proj="${escapeHtml(r.project)}">
+      <div class="head">
+        <span class="statusdot"></span>
+        <span class="ts">${fmt(r.ts)}</span>
+        <span class="proj" data-proj="${escapeHtml(r.project)}">${escapeHtml(r.project)}</span>
+        ${r.branch?`<span class="branch">⎇ ${escapeHtml(r.branch)}</span>`:""}
+        <span class="branch" style="margin-left:auto">${statusLbl}</span>
+      </div>
+      <pre>${text}${long?'<span class="fade"></span>':''}</pre>
+      ${long?'<button class="toggle">展開</button>':''}
+      ${reply}
+      ${acts?`<div class="meta-row">${acts}</div>`:""}
+      ${agents?`<div class="meta-row">${agents}</div>`:""}
+      ${fw?`<div class="files-block"><span class="label">📝作成:</span>${fw}</div>`:""}
+      ${fe?`<div class="files-block"><span class="label">✏️編集:</span>${fe}</div>`:""}
+      <div class="meta-row">
+        <span>⏱ ${fmtDur(r.duration_sec)}</span>
+        <span>🔁 ${r.turn_count}ターン</span>
+        ${r.cwd?`<span title="${escapeHtml(r.cwd)}">📁 ${escapeHtml(r.cwd)}</span>`:""}
+        ${r.session?`<span style="opacity:.5">🔖 ${escapeHtml(r.session.slice(0,8))}</span>`:""}
+      </div>
+    </div>`;
+  }
+
   function renderList(records){
     const list = $("list");
-    list.innerHTML = "";
-    // 新しい順に並べ替えて表示（内部は昇順だが表示は降順）
     const sorted = records.slice().sort((a,b)=> a.ts<b.ts?1:-1);
-    let curDay = "";
-    const frag = document.createDocumentFragment();
-    // 1000件超えたら最新1000だけ描画（軽さ優先）
-    const cap = 1000;
+    const cap = 500;
     const shown = sorted.slice(0, cap);
-    shown.forEach(r=>{
-      const dk = dayKey(r.ts);
-      if (dk !== curDay){
-        curDay = dk;
-        const h = document.createElement("div");
-        h.className = "date-sep";
-        h.textContent = dk;
-        frag.appendChild(h);
-      }
-      const c = document.createElement("div");
-      c.className = "card";
-      const text = escapeHtml(r.text);
-      const long = r.text.length > 300;
-      c.innerHTML = `
-        <div class="head">
-          <span class="ts">${fmt(r.ts)}</span>
-          <span class="proj">${escapeHtml(r.project||"")}</span>
-        </div>
-        <pre>${text}${long?'<span class="fade"></span>':''}</pre>
-        ${long?'<button class="toggle">展開</button>':''}
-      `;
-      if (long){
-        const btn = c.querySelector(".toggle");
+
+    if (shown.length===0){ list.innerHTML = '<div class="empty">該当なし</div>'; $("count").textContent="0件"; return; }
+
+    let html = "";
+    if (STATE.group){
+      // Group consecutive same-session
+      let curDay = "", curSess = "", buf = [];
+      const flush = ()=>{
+        if (!buf.length) return;
+        if (buf.length>1){
+          const head = `<div class="session-group" data-sess="${escapeHtml(buf[0].session||"")}">
+            <div class="sess-head">🔖 ${buf.length}プロンプト同一セッション (${buf[0].session?buf[0].session.slice(0,8):"?"})</div>`;
+          html += head + buf.map(renderCard).join("") + `</div>`;
+        } else {
+          html += renderCard(buf[0]);
+        }
+        buf = [];
+      };
+      shown.forEach(r=>{
+        const dk = dayKey(r.ts);
+        if (dk !== curDay){
+          flush();
+          curDay = dk; curSess = "";
+          html += `<div class="date-sep">${dk}</div>`;
+        }
+        if (r.session !== curSess){ flush(); curSess = r.session; }
+        buf.push(r);
+      });
+      flush();
+    } else {
+      let curDay = "";
+      shown.forEach(r=>{
+        const dk = dayKey(r.ts);
+        if (dk !== curDay){
+          curDay = dk;
+          html += `<div class="date-sep">${dk}</div>`;
+        }
+        html += renderCard(r);
+      });
+    }
+    list.innerHTML = html;
+    // expand toggles
+    list.querySelectorAll(".card").forEach(card=>{
+      const btn = card.querySelector(".toggle");
+      if (btn){
         btn.addEventListener("click", ()=>{
-          const pre = c.querySelector("pre");
+          const pre = card.querySelector("pre");
           const open = pre.classList.toggle("open");
           btn.textContent = open ? "畳む" : "展開";
           const fade = pre.querySelector(".fade");
           if (fade) fade.style.display = open ? "none":"";
         });
       }
-      frag.appendChild(c);
+      // Click project badge → filter by that project tab
+      card.querySelectorAll(".proj").forEach(p=>{
+        p.addEventListener("click", (e)=>{
+          e.stopPropagation();
+          STATE.tab = "p:"+p.dataset.proj;
+          buildTabs(); render();
+          window.scrollTo({top:0,behavior:"smooth"});
+        });
+      });
+      // Click file path → reverse lookup modal
+      card.querySelectorAll(".fp").forEach(fp=>{
+        fp.addEventListener("click", ()=>{
+          $("fileq").value = fp.title;
+          openFileModal();
+        });
+      });
     });
-    list.appendChild(frag);
-    $("count").textContent = `${records.length}件ヒット（表示: ${shown.length}）`;
+    $("count").textContent = `${records.length}件ヒット（表示: ${shown.length}${records.length>cap?" / "+records.length:""}）`;
   }
 
   function render(){
-    $("meta").textContent = `${DATA.count}件・built ${DATA.built_at}`;
-    if (!$("proj").options.length || $("proj").options.length === 1) buildProjectFilter();
+    buildTabs();
     const filtered = applyFilter();
+    buildStats(filtered);
+    buildDigest(filtered);
+    buildSummaries();
     buildHeatmap(filtered);
     renderList(filtered);
   }
 
-  ["q","proj","from","to"].forEach(id=>{
-    $(id).addEventListener("input", ()=> render());
-    $(id).addEventListener("change", ()=> render());
-  });
+  /* ========== File reverse search ========== */
+  function openFileModal(){
+    $("filemodal").classList.add("open");
+    runFileSearch();
+    $("fileq").focus();
+  }
+  function runFileSearch(){
+    const q = $("fileq").value.trim().toLowerCase();
+    const hits = [];
+    if (!q){ $("filehits").innerHTML = '<div style="color:var(--muted)">入力してね</div>'; return; }
+    DATA.records.forEach(r=>{
+      const all = [...r.files_written.map(f=>["📝",f]), ...r.files_edited.map(f=>["✏️",f])];
+      all.forEach(([icon,f])=>{
+        if (f.toLowerCase().includes(q)){
+          hits.push({r, f, icon});
+        }
+      });
+    });
+    hits.sort((a,b)=> a.r.ts<b.r.ts?1:-1);
+    const cap = 80;
+    $("filehits").innerHTML = hits.slice(0,cap).map(h=>`
+      <div class="hit">
+        <div class="t" data-ts="${escapeHtml(h.r.ts)}">${h.icon} ${escapeHtml(h.f)}</div>
+        <div style="color:var(--muted);margin-top:2px">${fmt(h.r.ts)} · ${escapeHtml(h.r.project)}</div>
+        <div style="color:#cfd4e2;margin-top:4px;font-size:11px">${escapeHtml(h.r.text.slice(0,140))}${h.r.text.length>140?"…":""}</div>
+      </div>
+    `).join("") + (hits.length>cap?`<div style="color:var(--muted);padding-top:8px">…他${hits.length-cap}件</div>`:
+                    hits.length===0?'<div style="color:var(--muted)">見つからない</div>':"");
+  }
+
+  function initUI(){
+    $("meta").textContent = `${DATA.count}件・built ${DATA.built_at}`;
+    buildProjectFilter();
+    render();
+
+    ["q","proj","from","to","status"].forEach(id=>{
+      $(id).addEventListener("input", render);
+      $(id).addEventListener("change", render);
+    });
+    $("grpbtn").addEventListener("click", ()=>{
+      STATE.group = !STATE.group;
+      $("grpbtn").style.color = STATE.group ? "var(--accent)":"";
+      render();
+    });
+    $("filebtn").addEventListener("click", openFileModal);
+    $("fileclose").addEventListener("click", ()=>$("filemodal").classList.remove("open"));
+    $("fileq").addEventListener("input", runFileSearch);
+    $("filemodal").addEventListener("click", (e)=>{
+      if (e.target.id==="filemodal") $("filemodal").classList.remove("open");
+    });
+
+    // Section collapses
+    document.querySelectorAll(".section-title[data-tgt]").forEach(t=>{
+      t.addEventListener("click", ()=>{
+        const el = $(t.dataset.tgt);
+        const tgl = t.querySelector(".tgl");
+        if (el.style.display==="none"){ el.style.display=""; tgl.textContent="▼"; }
+        else { el.style.display="none"; tgl.textContent="▶"; }
+      });
+    });
+  }
 })();
 </script>
 </body>
