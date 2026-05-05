@@ -1,7 +1,7 @@
 # Weekly: generate AI summaries for completed ISO weeks, then rebuild+push
 # Registered as PromptTimeline_Weekly (Sunday 07:00)
 $ErrorActionPreference = "Stop"
-$root = "C:\Users\atsus\000_ClaudeCode\prompt_timeline"
+$root = $PSScriptRoot
 Set-Location $root
 
 $logDir = Join-Path $root "logs"

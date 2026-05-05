@@ -1,7 +1,7 @@
 # Daily rebuild: extract prompts -> AES-GCM encrypt -> git push
 # Registered in Task Scheduler as PromptTimeline_Daily (runs daily)
 $ErrorActionPreference = "Stop"
-$root = "C:\Users\atsus\000_ClaudeCode\prompt_timeline"
+$root = $PSScriptRoot
 Set-Location $root
 
 $logDir = Join-Path $root "logs"
