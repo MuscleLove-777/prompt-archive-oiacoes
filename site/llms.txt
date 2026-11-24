@@ -1,0 +1,12 @@
+# Prompt Timeline
+
+> prompt-archive-oiacoes — MuscleLove-777 network site.
+
+## Main Pages
+
+- [prompt archive oiacoes](https://musclelove-777.github.io/prompt-archive-oiacoes/): main page of Prompt Timeline.
+
+## About this file
+
+This llms.txt follows the llmstxt.org proposal and lists the main entry points of this site for LLM-based crawlers and AI search agents.
+Generated automatically from sitemap.xml. Source repository: https://github.com/MuscleLove-777/prompt-archive-oiacoes
